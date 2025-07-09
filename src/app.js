@@ -14,12 +14,16 @@ app.use(cors({
 }));
 app.use(express.json());
 
-const loginRouter = require("./routes/login.routes");
-
 // Rutas
+const loginRouter = require("./routes/login.routes");
+const prospectoRouter = require("./routes/prospecto.routes");
+
+// Prefijo para las rutas - endpints - api
 app.use("/login", loginRouter);
-// app.use("/register", require("./routes/register"));
+app.use("/prospecto", prospectoRouter);
 // app.use("/confirmacion", require("./routes/confirmacion"));
+
+
 
 app.get("/", (req, res) => {
     res.send("✅ CRM Backend activo desde app.js");
