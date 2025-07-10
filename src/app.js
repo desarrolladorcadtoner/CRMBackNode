@@ -17,11 +17,12 @@ app.use(express.json());
 // Rutas
 const loginRouter = require("./routes/login.routes");
 const prospectoRouter = require("./routes/prospecto.routes");
+const confirmacionRouter = require("./routes/confirmacion.routes");
 
 // Prefijo para las rutas - endpints - api
 app.use("/login", loginRouter);
 app.use("/prospecto", prospectoRouter);
-// app.use("/confirmacion", require("./routes/confirmacion"));
+app.use("/confirmacion", confirmacionRouter);
 
 
 
