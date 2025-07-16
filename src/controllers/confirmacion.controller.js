@@ -1,4 +1,7 @@
 // src/controllers/confirmacion.controller.js
+const net = require("net");
+const bcrypt = require("bcrypt");
+
 const {
     generarPassword,
     getDistribuidorInfoPorRFC,
@@ -25,16 +28,18 @@ async function confirmarDistribuidor(req, res) {
         const pwd = generarPassword();
         const nuevoId = await getNextIdDistribuidor();
 
-        await insertUsuario(distribuidor.CorreoFact, pwd, nuevoId);
-        await updateTipoCliente(rfc, tipo_cliente_id);
-        await actualizarIdDistribuidorEnSteps(rfc, nuevoId);
-        await actualizarStatusPorRFC(rfc, "Terminado");
-
         try {
-            await enviarCorreoBienvenida(distribuidor.CorreoFact, distribuidor.CorreoFact, pwd, nuevoId);
+            await enviarCorreoBienvenida(distribuidor.CorreoFact, distribuidor.CorreoFact, pwd)
         } catch (err) {
             return res.status(500).json({ message: "Usuario creado, pero error al enviar correo", error: err.message });
         }
+
+        const hashedPwd = await bcrypt.hash(pwd, 10); // 3. ahora sí: la hasheamos
+
+        await insertUsuario(distribuidor.CorreoFact, hashedPwd, nuevoId);
+        await updateTipoCliente(rfc, tipo_cliente_id);
+        await actualizarIdDistribuidorEnSteps(rfc, nuevoId);
+        await actualizarStatusPorRFC(rfc, "Aceptado");
 
         res.json({
             message: "Distribuidor confirmado y correo enviado",
@@ -49,10 +54,10 @@ async function confirmarDistribuidor(req, res) {
         res.status(400).json({ message: "Acción inválida. Usa 'aceptar' o 'denegar'" });
     }
 
-    const socket = net.createConnection(465, "mail.cadtoner.com.mx", () => {
+   {/*const socket = net.createConnection(465, "mail.cadtoner.com.mx", () => {
         console.log("Conexión abierta ✅");
         socket.end();
-      });
+      });*/}
 }
 
 async function obtenerCatalogoTipoCliente(req, res) {

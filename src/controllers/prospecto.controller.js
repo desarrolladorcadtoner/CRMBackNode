@@ -1,8 +1,5 @@
 const { obtenerDocumentosPorRFC, obtenerDatosDistribuidorPorRFC, obtenerDistribuidoresFiltrados } = require("../services/prospecto.service");
 const { DistribuidorCompleto } = require("../models/prospecto.model");
-const { Readable } = require("stream");
-const fs = require("fs");
-const path = require("path");
 const archiver = require("archiver");
 
 async function descargarDocumentos(req, res) {

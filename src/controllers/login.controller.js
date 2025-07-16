@@ -1,15 +1,19 @@
 // src/controllers/login.controller.js
 const { validarUsuario, insertarUsuario } = require("../services/login.service");
 const { poolPromise } = require("../config/db");
+const jwt = require("jsonwebtoken");
+
+const SECRET = process.env.JWT_SECRET || "secretKey"; // guarda esto en tu .env
 
 async function login(req, res) {
     const { usuario, password } = req.body;
-    console.log("🔍 Intentando login con:", usuario, password);
 
     try {
         const valido = await validarUsuario(usuario, password);
         if (valido) {
-            return res.json({ message: "Usuario válido" });
+            const token = jwt.sign({ usuario }, SECRET, { expiresIn: "1h" });
+
+            return res.json({ message: "Usuario válido", token });
         } else {
             return res.status(401).json({ message: "Usuario inválido" });
         }

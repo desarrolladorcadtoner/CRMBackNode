@@ -1,18 +1,20 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
+const morgan = require("morgan");
 
 const app = express();
 
 // Middlewares
 app.use(cors({
-    origin: [
-        "http://localhost:3001",
-        "http://172.100.203.202:3001",
-    ],
-    credentials: true,
+    origin: (origin, callback) => {
+        // Permitir todas las IPs + localhost durante desarrollo
+        callback(null, true);
+    },
+    credentials: true
 }));
 app.use(express.json());
+app.use(morgan(":method :url :status :remote-addr"));
 
 // Rutas
 const loginRouter = require("./routes/login.routes");

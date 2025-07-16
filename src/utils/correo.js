@@ -2,7 +2,7 @@
 const nodemailer = require("nodemailer");
 require("dotenv").config();
 
-async function enviarCorreoBienvenida(destinatario, usuario, pwd, idDistribuidor) {
+async function enviarCorreoBienvenida(destinatario, usuario, pwd) {
     const html = `<html>
       <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: sans-serif;">
         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="padding: 40px 0;">
