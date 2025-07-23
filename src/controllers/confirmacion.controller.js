@@ -11,11 +11,12 @@ const {
     updateTipoCliente,
     actualizarStatusPorRFC,
     catalogoTipoCliente,
+    insertarDireccionDesdeRegisterSThree,
 } = require("../services/confirmacion.service");
 const { enviarCorreoBienvenida } = require("../utils/correo");
 
 async function confirmarDistribuidor(req, res) {
-    const { rfc, accion, tipo_cliente_id } = req.body;
+    const { rfc, accion, tipo_cliente_id, idDistribuidor } = req.body;
 
     const distribuidor = await getDistribuidorInfoPorRFC(rfc);
     if (!distribuidor) return res.status(404).json({ message: "Distribuidor no encontrado" });
@@ -36,10 +37,11 @@ async function confirmarDistribuidor(req, res) {
 
         const hashedPwd = await bcrypt.hash(pwd, 10); // 3. ahora sí: la hasheamos
 
-        await insertUsuario(distribuidor.CorreoFact, hashedPwd, nuevoId);
+        await insertUsuario(distribuidor.CorreoFact, hashedPwd, idDistribuidor);
         await updateTipoCliente(rfc, tipo_cliente_id);
-        await actualizarIdDistribuidorEnSteps(rfc, nuevoId);
+        await actualizarIdDistribuidorEnSteps(rfc, idDistribuidor);
         await actualizarStatusPorRFC(rfc, "Aceptado");
+        await insertarDireccionDesdeRegisterSThree(rfc, idDistribuidor);
 
         res.json({
             message: "Distribuidor confirmado y correo enviado",

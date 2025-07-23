@@ -1,6 +1,9 @@
-const { obtenerDocumentosPorRFC, obtenerDatosDistribuidorPorRFC, obtenerDistribuidoresFiltrados } = require("../services/prospecto.service");
+const { obtenerDocumentosPorRFC, obtenerDatosDistribuidorPorRFC, obtenerDistribuidoresFiltrados, 
+    getDataProspectoGeneral, getDatosContacto, getDireccionesEntrega, getDatosCompras, getDireccionFiscal } = require("../services/prospecto.service");
 const { DistribuidorCompleto } = require("../models/prospecto.model");
 const archiver = require("archiver");
+
+
 
 async function descargarDocumentos(req, res) {
     const { rfc } = req.params;
@@ -43,8 +46,66 @@ async function getDistribuidoresResumen(req, res) {
     res.json(datos);
 }
 
+async function sendDataProspecto(req, res) {
+    const { rfc } = req.params;
+
+    try {
+        const datosGenerales = await getDataProspectoGeneral(rfc);
+        
+        if (!datosGenerales) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        const [
+            DatosContacto,
+            DireccionesEntrega,
+            DatosCompras,
+            DireccionFiscal
+        ] = await Promise.all([
+            getDatosContacto(rfc),
+            getDireccionesEntrega(rfc),
+            getDatosCompras(rfc),
+            getDireccionFiscal(rfc)
+        ]);
+
+        const prospectoResponse = {
+            ...datosGenerales,
+            DatosContacto,
+            DireccionesEntrega,
+            DatosCompras,
+            DireccionFiscal
+        };
+
+        res.json(prospectoResponse)
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+async function testapi(req, res) {
+    const { municipio } = req.params;
+    try {
+        const idNameEstado = await getObtenerIdEstado(municipio);
+
+        if (!idNameEstado) {
+            return res.status(404).json({ message: 'Estado no encontrado' });
+        }
+        
+        const municipioEstadoResponse = {
+            idNameEstado
+        };
+
+        res.json(municipioEstadoResponse)
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+
 module.exports = {
     descargarDocumentos,
     getDistribuidor,
     getDistribuidoresResumen,
+    sendDataProspecto,
+    testapi
 };

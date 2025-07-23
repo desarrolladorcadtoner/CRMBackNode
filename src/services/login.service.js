@@ -1,9 +1,9 @@
 // src/services/login.service.js
-const { poolPromise } = require("../config/db");
+const { getConnection } = require("../config/db");
 
 async function validarUsuario(usuario, password) {
     try {
-        const pool = await poolPromise;
+        const pool = await getConnection('DistWeb');
         const result = await pool
             .request()
             .input("usuario", usuario)
@@ -24,7 +24,7 @@ async function validarUsuario(usuario, password) {
 
 async function insertarUsuario({ us_idusr, us_nom, us_psw, us_depto }) {
     try {
-        const pool = await poolPromise;
+        const pool = await getConnection('DDistWebist');
         await pool
             .request()
             .input("us_idusr", us_idusr)
