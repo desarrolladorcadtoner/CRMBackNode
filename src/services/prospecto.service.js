@@ -325,6 +325,32 @@ async function getDatosCompras(rfcProspecto) {
         return data[0] || null;
     }
 
+    /**ACtuializar Datos antes de envio*/
+async function actualizarDatosCompras(rfc, { LimiteCredito, DiasCredito, DescuentoAutorizado }) {
+    try {
+        const query = `
+            UPDATE [dbo].[CreditosProspectos]
+            SET 
+                LimiteCredito = @param0,
+                DiasCredito = @param1,
+                Des_Aut = @param2
+            WHERE RFC = @param3
+        `;
+
+        await executeQuery('DistCRM', query, [
+            LimiteCredito,
+            DiasCredito,
+            DescuentoAutorizado,
+            rfc
+        ]);
+
+        return true;
+    } catch (error) {
+        console.error("❌ Error al actualizar datos de compras:", error.message);
+        return false;
+    }
+}
+
 
 module.exports = {
     obtenerDatosDistribuidorPorRFC,
@@ -336,5 +362,7 @@ module.exports = {
     getDireccionesEntrega,
     getObtenerIdEstado,
     getDatosCompras,
-    getDireccionFiscal
+    getDireccionFiscal,
+    /**Para actualizacion */
+    actualizarDatosCompras
 };

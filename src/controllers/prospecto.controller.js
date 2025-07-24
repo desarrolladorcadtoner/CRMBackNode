@@ -82,30 +82,9 @@ async function sendDataProspecto(req, res) {
     }
 }
 
-async function testapi(req, res) {
-    const { municipio } = req.params;
-    try {
-        const idNameEstado = await getObtenerIdEstado(municipio);
-
-        if (!idNameEstado) {
-            return res.status(404).json({ message: 'Estado no encontrado' });
-        }
-        
-        const municipioEstadoResponse = {
-            idNameEstado
-        };
-
-        res.json(municipioEstadoResponse)
-    } catch (error) {
-        console.log(error);
-    }
-}
-
-
 module.exports = {
     descargarDocumentos,
     getDistribuidor,
     getDistribuidoresResumen,
     sendDataProspecto,
-    testapi
 };
