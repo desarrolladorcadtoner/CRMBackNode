@@ -14,7 +14,6 @@ function generarPassword(longitud = 8) {
 async function getDistribuidorInfoPorRFC(rfc) {
     const pool = await getConnection('DistWeb');
     const result = await pool.request()
-        .request()
         .input("rfc", rfc)
         .query(`SELECT RazonSocial, CorreoFact FROM [CadDist].[dbo].[RegisterSOne] WHERE RFC = @rfc`);
     return result.recordset[0] || null;
@@ -104,7 +103,7 @@ async function insertarDireccionDesdeRegisterSThree(rfc, idDistribuidor) {
         .request()
         .input("rfc", rfc)
         .query(`
-            SELECT calleEntrega, numExtEntrega, numIntEntrega, Sucursal,
+            SELECT calleEntrega, numExtEntrega, numIntEntrega,
                    coloniaEntrega, codigoPostalEntrega, estadoEntrega, ciudadEntrega
             FROM [CadDist].[dbo].[RegisterSThree]
             WHERE RFC = @rfc
@@ -126,15 +125,14 @@ async function insertarDireccionDesdeRegisterSThree(rfc, idDistribuidor) {
         .input("Estado", direccion.estadoEntrega)
         .input("Ciudad", direccion.ciudadEntrega)
         .input("TipoDireccion", 'Entrega')
-        .input("Sucursal", direccion.Sucursal)
         .query(`
             INSERT INTO [CadDist].[dbo].[DireccionesDistribuidor] (
                 IdDistribuidor, Calle, NumExt, NumInt, Colonia,
-                CodigoPostal, Estado, Ciudad, TipoDireccion, Sucursal
+                CodigoPostal, Estado, Ciudad, TipoDireccion
             )
             VALUES (
                 @IdDistribuidor, @Calle, @NumExt, @NumInt, @Colonia,
-                @CodigoPostal, @Estado, @Ciudad, @TipoDireccion, @Sucursal
+                @CodigoPostal, @Estado, @Ciudad, @TipoDireccion
             )
         `);
 }

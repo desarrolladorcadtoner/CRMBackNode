@@ -325,31 +325,41 @@ async function getDatosCompras(rfcProspecto) {
         return data[0] || null;
     }
 
-    /**ACtuializar Datos antes de envio*/
-async function actualizarDatosCompras(rfc, { LimiteCredito, DiasCredito, DescuentoAutorizado }) {
-    try {
-        const query = `
-            UPDATE [dbo].[CreditosProspectos]
-            SET 
-                LimiteCredito = @param0,
-                DiasCredito = @param1,
-                Des_Aut = @param2
-            WHERE RFC = @param3
-        `;
+/**ACtuializar Datos antes de envio*/
+async function actualizarDatosCompras(rfc, { LimiteCredito, DiasCredito, DescuentoAutorizado, Des_TinGra, Des_InsTon, Des_InsTin, Des_CarTon, Des_CarTin }) {
+        try {
+            const query = `
+                UPDATE [dbo].[CreditosProspectos]
+                SET 
+                    LimiteCredito = @param0,
+                    DiasCredito = @param1,
+                    Des_Aut = @param2,
+                    Des_TinGra = @param3,
+                    Des_InsTon = @param4,
+                    Des_InsTin = @param5,
+                    Des_CarTon = @param6,
+                    Des_CarTin = @param7
+                WHERE RFC = @param8
+            `;
 
-        await executeQuery('DistCRM', query, [
-            LimiteCredito,
-            DiasCredito,
-            DescuentoAutorizado,
-            rfc
-        ]);
+            await executeQuery('DistCRM', query, [
+                LimiteCredito,
+                DiasCredito,
+                DescuentoAutorizado,
+                Des_TinGra,
+                Des_InsTon,
+                Des_InsTin,
+                Des_CarTon,
+                Des_CarTin,
+                rfc
+            ]);
 
-        return true;
-    } catch (error) {
-        console.error("❌ Error al actualizar datos de compras:", error.message);
-        return false;
+            return true;
+        } catch (error) {
+            console.error("❌ Error al actualizar datos de compras:", error.message);
+            return false;
+        }
     }
-}
 
 
 module.exports = {

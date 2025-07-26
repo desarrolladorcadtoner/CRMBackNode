@@ -1,9 +1,9 @@
 const { obtenerDocumentosPorRFC, obtenerDatosDistribuidorPorRFC, obtenerDistribuidoresFiltrados, 
-    getDataProspectoGeneral, getDatosContacto, getDireccionesEntrega, getDatosCompras, getDireccionFiscal } = require("../services/prospecto.service");
+    getDataProspectoGeneral, getDatosContacto, getDireccionesEntrega, getDatosCompras, getDireccionFiscal,
+    actualizarDatosCompras } = require("../services/prospecto.service");
+const { updateTipoCliente } = require("../services/confirmacion.service");
 const { DistribuidorCompleto } = require("../models/prospecto.model");
 const archiver = require("archiver");
-
-
 
 async function descargarDocumentos(req, res) {
     const { rfc } = req.params;
@@ -46,12 +46,39 @@ async function getDistribuidoresResumen(req, res) {
     res.json(datos);
 }
 
-async function sendDataProspecto(req, res) {
+async function actualizarCreditoProspecto(req, res){
+    const {rfc} = req.params;
+    const { LimiteCredito, DiasCredito, DescuentoAutorizado, Des_TinGra, Des_InsTon, Des_InsTin, Des_CarTon, Des_CarTin } = req.body;
+
+    if(!rfc || LimiteCredito == null || DiasCredito == null || DescuentoAutorizado == null){
+        return res.status(400).json({message: "Faltan datos para actualizar"})
+    }
+
+    const success = await actualizarDatosCompras(rfc, { LimiteCredito, DiasCredito, DescuentoAutorizado, Des_TinGra, Des_InsTon, Des_InsTin, Des_CarTon, Des_CarTin });
+
+    if (!success) {
+        return res.status(500).json({ message: "Error al actualizar los datos" });
+    }
+
+    res.json({ message: "Datos de crédito actualizados correctamente" });
+}
+
+async function updateAndSendProspecto(req, res) {
     const { rfc } = req.params;
+    const { tipoClienteId, creditos } = req.body;
 
     try {
+        // 1. Actualizar tipo cliente y créditos si llegan
+        if (tipoClienteId) {
+            await updateTipoCliente(rfc, tipoClienteId);
+        }
+
+        if (creditos) {
+            await actualizarDatosCompras(rfc, creditos);
+        }
+
+        // 2. Obtener info actualizada
         const datosGenerales = await getDataProspectoGeneral(rfc);
-        
         if (!datosGenerales) {
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
@@ -68,6 +95,7 @@ async function sendDataProspecto(req, res) {
             getDireccionFiscal(rfc)
         ]);
 
+        // 3. Armar y enviar el response completo
         const prospectoResponse = {
             ...datosGenerales,
             DatosContacto,
@@ -76,15 +104,18 @@ async function sendDataProspecto(req, res) {
             DireccionFiscal
         };
 
-        res.json(prospectoResponse)
+        res.json(prospectoResponse);
     } catch (error) {
-        console.log(error);
+        console.error("❌ Error en updateAndSendProspecto:", error.message);
+        res.status(500).json({ message: "Error al enviar datos del prospecto" });
     }
 }
+
 
 module.exports = {
     descargarDocumentos,
     getDistribuidor,
     getDistribuidoresResumen,
-    sendDataProspecto,
+    actualizarCreditoProspecto,
+    updateAndSendProspecto,
 };

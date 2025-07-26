@@ -13,7 +13,7 @@ const {
     catalogoTipoCliente,
     insertarDireccionDesdeRegisterSThree,
 } = require("../services/confirmacion.service");
-const { enviarCorreoBienvenida } = require("../utils/correo");
+const { enviarCorreoBienvenida, bienvenidaClienteWeb } = require("../utils/correo");
 
 async function confirmarDistribuidor(req, res) {
     const { rfc, accion, tipo_cliente_id, idDistribuidor } = req.body;
@@ -45,7 +45,7 @@ async function confirmarDistribuidor(req, res) {
 
         res.json({
             message: "Distribuidor confirmado y correo enviado",
-            usuario: distribuidor.CorreoFact,
+            usuario: distribuidor.CorreoFact.trim(),
             password: pwd,
             idDistribuidor: nuevoId,
         });
@@ -56,10 +56,6 @@ async function confirmarDistribuidor(req, res) {
         res.status(400).json({ message: "Acción inválida. Usa 'aceptar' o 'denegar'" });
     }
 
-   {/*const socket = net.createConnection(465, "mail.cadtoner.com.mx", () => {
-        console.log("Conexión abierta ✅");
-        socket.end();
-      });*/}
 }
 
 async function obtenerCatalogoTipoCliente(req, res) {
@@ -71,8 +67,48 @@ async function obtenerCatalogoTipoCliente(req, res) {
     }
 }
 
+async function confirmAltaDistExistente(req, res) {
+    const { rfc, idDistribuidor } = req.body;
+
+    if (!rfc || !idDistribuidor) {
+        return res.status(400).json({ message: "RFC e idDistribuidor son obligatorios" });
+    }
+
+    const distribuidor = await getDistribuidorInfoPorRFC(rfc);
+    if (!distribuidor) return res.status(404).json({ message: "Distribuidor no encontrado" });
+
+    const passwordPlano = generarPassword();
+
+    try {
+        await bienvenidaClienteWeb(distribuidor.CorreoFact, distribuidor.CorreoFact, passwordPlano)
+    } catch (err) {
+        return res.status(500).json({ message: "Usuario creado, pero error al enviar correo", error: err.message });
+    }
+
+    const passwordHash = await bcrypt.hash(passwordPlano, 10);
+
+    try {
+        await insertUsuario(distribuidor.CorreoFact, passwordHash, idDistribuidor);
+        await actualizarIdDistribuidorEnSteps(rfc, idDistribuidor);
+        await insertarDireccionDesdeRegisterSThree(rfc, idDistribuidor);
+        await enviarCorreoBienvenida(distribuidor.CorreoFact, distribuidor.CorreoFact, passwordPlano);
+
+        res.status(200).json({
+            message: "Alta de Distribuidor Existente migrado y registrado correctamente.",
+            usuario: distribuidor.CorreoFact.trim(),
+            password: passwordPlano,
+            idDistribuidor
+        });
+    } catch (err) {
+        console.error("❌ Error al confirmar desde web:", err);
+        res.status(500).json({ message: "Error interno al generar alta", error: err.message });
+    }
+}
+
+
 module.exports = {
     confirmarDistribuidor,
     obtenerCatalogoTipoCliente,
+    confirmAltaDistExistente
 };
   
