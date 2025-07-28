@@ -49,7 +49,7 @@ async function confirmarDistribuidor(req, res) {
             password: pwd,
             idDistribuidor: nuevoId,
         });
-    } else if (accion.toLowerCase() === "denegar") {
+    } else if (accion.toLowerCase() === "Denegar") {
         await actualizarStatusPorRFC(rfc, "Rechazado");
         res.json({ message: "Distribuidor denegado. Status actualizado." });
     } else {
@@ -69,7 +69,7 @@ async function obtenerCatalogoTipoCliente(req, res) {
 
 async function confirmAltaDistExistente(req, res) {
     const { rfc, idDistribuidor } = req.body;
-
+    //console.log("Id del Distribuidor a registrar: ", idDistribuidor)
     if (!rfc || !idDistribuidor) {
         return res.status(400).json({ message: "RFC e idDistribuidor son obligatorios" });
     }
@@ -91,7 +91,7 @@ async function confirmAltaDistExistente(req, res) {
         await insertUsuario(distribuidor.CorreoFact, passwordHash, idDistribuidor);
         await actualizarIdDistribuidorEnSteps(rfc, idDistribuidor);
         await insertarDireccionDesdeRegisterSThree(rfc, idDistribuidor);
-        await enviarCorreoBienvenida(distribuidor.CorreoFact, distribuidor.CorreoFact, passwordPlano);
+        //await enviarCorreoBienvenida(distribuidor.CorreoFact, distribuidor.CorreoFact, passwordPlano);
 
         res.status(200).json({
             message: "Alta de Distribuidor Existente migrado y registrado correctamente.",
