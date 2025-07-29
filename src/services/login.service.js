@@ -2,29 +2,35 @@
 const { getConnection } = require("../config/db");
 
 async function validarUsuario(usuario, password) {
-    try {
-        const pool = await getConnection('DistWeb');
-        const result = await pool
-            .request()
-            .input("usuario", usuario)
-            .input("password", password)
-            .query(`
-          SELECT COUNT(*) as total
-          FROM [CadCRM].[dbo].[c4users]
-          WHERE us_idusr = @usuario AND us_psw = @password
+    const pool = await getConnection('DistCRM');
+    const result = await pool
+        .request()
+        .input("usuario", usuario)
+        .input("password", password)
+        .query(`
+            SELECT * FROM [CadCRM].[dbo].[c4users]
+            WHERE us_idusr = @usuario AND us_psw = @password
         `);
 
-        //console.log("🧪 Resultado de validación:", result.recordset);
-        return result.recordset[0].total > 0;
-    } catch (error) {
-        //console.error("Error en validarUsuario:", error);
-        throw error;
-    }
-  }
+    return result.recordset.length > 0;
+}
 
-async function insertarUsuario({ us_idusr, us_nom, us_psw, us_depto }) {
+async function getUsuarioByUsername(usuario) {
+    const pool = await getConnection('DistCRM');
+    const result = await pool
+        .request()
+        .input("usuario", usuario)
+        .query(`
+            SELECT * FROM [CadCRM].[dbo].[c4users]
+            WHERE us_idusr = @usuario
+        `);
+
+    return result.recordset[0];
+}
+
+async function altaUsuarioCRM({ us_idusr, us_nom, us_psw, us_depto }) {
     try {
-        const pool = await getConnection('DDistWebist');
+        const pool = await getConnection('DistWeb');
         await pool
             .request()
             .input("us_idusr", us_idusr)
@@ -45,5 +51,6 @@ async function insertarUsuario({ us_idusr, us_nom, us_psw, us_depto }) {
 
 module.exports = {
     validarUsuario,
-    insertarUsuario,
+    altaUsuarioCRM,
+    getUsuarioByUsername
 };

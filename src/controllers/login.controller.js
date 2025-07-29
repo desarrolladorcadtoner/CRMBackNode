@@ -1,30 +1,35 @@
 // src/controllers/login.controller.js
-const { validarUsuario, insertarUsuario } = require("../services/login.service");
-const { poolPromise } = require("../config/db");
+const { validarUsuario, altaUsuarioCRM, getUsuarioByUsername } = require("../services/login.service");
 const jwt = require("jsonwebtoken");
 
 const SECRET = process.env.JWT_SECRET || "secretKey"; // guarda esto en tu .env
 
-async function login(req, res) {
+async function loginUsuario(req, res) {
     const { usuario, password } = req.body;
 
-    try {
-        const valido = await validarUsuario(usuario, password);
-        if (valido) {
-            const token = jwt.sign({ usuario }, SECRET, { expiresIn: "1h" });
+    const esValido = await validarUsuario(usuario, password);
+    if (!esValido) return res.status(401).json({ message: "Usuario inválido" });
 
-            return res.json({ message: "Usuario válido", token });
-        } else {
-            return res.status(401).json({ message: "Usuario inválido" });
-        }
-    } catch (error) {
-        return res.status(500).json({ message: "Error del servidor" });
-    }
+    const user = await getUsuarioByUsername(usuario);
+
+    const token = jwt.sign({ usuario: user.Usuario }, process.env.JWT_SECRET, {
+        expiresIn: "1d",
+    });
+
+    // Enviar cookie segura
+    res.cookie("token", token, {
+        httpOnly: true,
+        secure: false, // true si usas HTTPS
+        sameSite: "strict",
+        maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    res.json({ message: "Usuario válido" }); // Ya no enviamos el token manualmente
 }
 
-async function testConexion(req, res) {
+/*async function testConexion(req, res) {
     try {
-        const pool = await poolPromise;
+        const pool = await getConnection('DistCRM');
         const result = await pool.request()
             .query("SELECT TOP 5 * FROM [CadCRM].[dbo].[c4users]");
 
@@ -33,11 +38,11 @@ async function testConexion(req, res) {
         console.error("❌ Error al consultar usuarios:", err);
         return res.status(500).json({ error: "No se pudo consultar la base de datos" });
     }
-}
+}*/
 
 async function crearUsuario(req, res) {
     try {
-        const exito = await insertarUsuario(req.body);
+        const exito = await altaUsuarioCRM(req.body);
         if (exito) {
             return res.json({ message: "Usuario insertado correctamente" });
         } else {
@@ -48,8 +53,13 @@ async function crearUsuario(req, res) {
     }
 }
 
+function logoutUsuario(req, res) {
+    res.clearCookie("token");
+    res.json({ message: "Sesión cerrada" });
+}
+
 module.exports = {
-    login,
+    loginUsuario,
     crearUsuario,
-    testConexion
+    logoutUsuario
 };
