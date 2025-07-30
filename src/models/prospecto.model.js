@@ -1,20 +1,29 @@
 // src/models/prospecto.model.js
 
+function limpiarEspacios(data) {
+    const limpio = {};
+    for (const key in data) {
+        const valor = data[key];
+        limpio[key] = typeof valor === 'string' ? valor.trim() : valor;
+    }
+    return limpio;
+}
+
 class RegisterSOne {
     constructor(data) {
-        Object.assign(this, data);
+        Object.assign(this, limpiarEspacios(data));
     }
 }
 
 class RegisterSTwo {
     constructor(data) {
-        Object.assign(this, data);
+        Object.assign(this, limpiarEspacios(data));
     }
 }
 
 class RegisterSThree {
     constructor(data) {
-        Object.assign(this, data);
+        Object.assign(this, limpiarEspacios(data));
     }
 }
 
