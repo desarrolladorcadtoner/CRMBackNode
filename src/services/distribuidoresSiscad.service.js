@@ -1,6 +1,4 @@
 const { getConnection } = require("../config/db");
-const fs = require("fs");
-const path = require("path");
 
 async function obtenerDistribuidoresSiscad(){
     const pool = await getConnection('Siscad');

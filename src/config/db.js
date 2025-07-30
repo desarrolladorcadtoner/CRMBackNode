@@ -22,6 +22,16 @@ const dbConfigs = {
             trustServerCertificate: process.env.DB_TRUST_CERT === 'true',
         },
     },
+    CadDist: {
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        server: process.env.DB_SERVER,
+        database: process.env.DB_NAME4,
+        options: {
+            encrypt: true,
+            trustServerCertificate: process.env.DB_TRUST_CERT === 'true',
+        },
+    },
     Siscad: {
         user: process.env.DB_USER2,
         password: process.env.DB_PASSWORD2,
