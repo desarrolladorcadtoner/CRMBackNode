@@ -54,11 +54,11 @@ async function obtenerDistribuidoresFiltrados() {
 
     return result.recordset.map(dist => {
         const base = {
-            RFC: dist.RFC.trim() || '',
-            TipoPersona: dist.TipoPersona.trim() || '',
-            RazonSocial: dist.RazonSocial.trim() || '',
-            CorreoFact: dist.CorreoFact.trim() || '',
-            Telefono: dist.Telefono.trim() || '',
+            RFC: dist.RFC?.trim() || '',
+            TipoPersona: dist.TipoPersona?.trim() || '',
+            RazonSocial: dist.RazonSocial?.trim() || '',
+            CorreoFact: dist.CorreoFact?.trim() || '',
+            Telefono: dist.Telefono?.trim() || '',
         };
         if (dist.TipoPersona.toLowerCase() === "moral") {
             base.NombreComercial = dist.NombreComercial;
@@ -114,8 +114,9 @@ async function obtenerDocumentosPorRFC(rfc) {
     return archivos;
 }
 
-/* ---------- Funcion de get para compartir la informacion a externo ---------- */
- //#region Funciones para obtener los datos generales a enviar del prospecto 
+ //#region Funciones para enviar el prospecto nuevo o migrado a Siscado o autmotaico
+    /* ---------- Funcion de get para compartir la informacion a externo ---------- */
+    //#region Funciones para obtener los datos generales a enviar del prospecto 
     // Obtener info principal del prospecto (RegisterSOne)
     async function getDataProspectoGeneral(rfcProspecto) {
         const query = `
@@ -158,7 +159,7 @@ async function obtenerDocumentosPorRFC(rfc) {
     }
 //#endregion
 
-// Funcion para obtener los datos de contcto/comunicacion con el cliente
+    // Funcion para obtener los datos de contcto/comunicacion con el cliente
     async function getDatosContacto(rfcProspecto){
     const query = `
         SELECT RazonSocial, Telefono AS Tel1, whatsApp, CorreoFact, 'Dueño' AS TipoContacto, NULL AS FechaCumple
@@ -181,7 +182,7 @@ async function obtenerDocumentosPorRFC(rfc) {
     }));
     }
 
-//#region Funciones para obtener la informacion de direccion de entrega del prospecto
+    //#region Funciones para obtener la informacion de direccion de entrega del prospecto
     // funcion para obtener la direccion de entrega de prodcuto del cliente
     async function getDireccionesEntrega(rfcProspecto) {
         const query = `
@@ -259,24 +260,24 @@ async function obtenerDocumentosPorRFC(rfc) {
 
 //#endregion
 
-//Funcion para obtener los datos del credito del prospecto
-async function getDatosCompras(rfcProspecto) {
-    const query = `
-        SELECT LimiteCredito,
-        DiasCredito,
-        Des_Aut AS DescuentoAutorizado
-        FROM [dbo].[CreditosProspectos]
-        WHERE RFC = @param0
-    `;
+    //Funcion para obtener los datos del credito del prospecto
+    async function getDatosCompras(rfcProspecto) {
+        const query = `
+            SELECT LimiteCredito,
+            DiasCredito,
+            Des_Aut AS DescuentoAutorizado
+            FROM [dbo].[CreditosProspectos]
+            WHERE RFC = @param0
+        `;
 
-    const data = await executeQuery('DistCRM', query, [rfcProspecto]);
+        const data = await executeQuery('DistCRM', query, [rfcProspecto]);
 
-    return data.map(r => ({
-        LimiteCredito: r.LimiteCredito.toString(),
-        DiasCredito: r.DiasCredito,
-        DescuentoAutorizado: r.DescuentoAutorizado ,
-    }));
-}
+        return data.map(r => ({
+            LimiteCredito: r.LimiteCredito.toString(),
+            DiasCredito: r.DiasCredito,
+            DescuentoAutorizado: r.DescuentoAutorizado ,
+        }));
+    }
 
     // Funcion para obtener los datos de direccion fiscal
     async function getDireccionFiscal(rfcProspecto) {
@@ -325,42 +326,42 @@ async function getDatosCompras(rfcProspecto) {
         return data[0] || null;
     }
 
-/**ACtuializar Datos antes de envio*/
-async function actualizarDatosCompras(rfc, { LimiteCredito, DiasCredito, DescuentoAutorizado, Des_TinGra, Des_InsTon, Des_InsTin, Des_CarTon, Des_CarTin }) {
-        try {
-            const query = `
-                UPDATE [dbo].[CreditosProspectos]
-                SET 
-                    LimiteCredito = @param0,
-                    DiasCredito = @param1,
-                    Des_Aut = @param2,
-                    Des_TinGra = @param3,
-                    Des_InsTon = @param4,
-                    Des_InsTin = @param5,
-                    Des_CarTon = @param6,
-                    Des_CarTin = @param7
-                WHERE RFC = @param8
-            `;
+        /* ACtuializar Datos antes de envio */
+        async function actualizarDatosCompras(rfc, { LimiteCredito, DiasCredito, DescuentoAutorizado, Des_TinGra, Des_InsTon, Des_InsTin, Des_CarTon, Des_CarTin }) {
+                try {
+                    const query = `
+                        UPDATE [dbo].[CreditosProspectos]
+                        SET 
+                            LimiteCredito = @param0,
+                            DiasCredito = @param1,
+                            Des_Aut = @param2,
+                            Des_TinGra = @param3,
+                            Des_InsTon = @param4,
+                            Des_InsTin = @param5,
+                            Des_CarTon = @param6,
+                            Des_CarTin = @param7
+                        WHERE RFC = @param8
+                    `;
 
-            await executeQuery('DistCRM', query, [
-                LimiteCredito,
-                DiasCredito,
-                DescuentoAutorizado,
-                Des_TinGra,
-                Des_InsTon,
-                Des_InsTin,
-                Des_CarTon,
-                Des_CarTin,
-                rfc
-            ]);
+                    await executeQuery('DistCRM', query, [
+                        LimiteCredito,
+                        DiasCredito,
+                        DescuentoAutorizado,
+                        Des_TinGra,
+                        Des_InsTon,
+                        Des_InsTin,
+                        Des_CarTon,
+                        Des_CarTin,
+                        rfc
+                    ]);
 
-            return true;
-        } catch (error) {
-            console.error("❌ Error al actualizar datos de compras:", error.message);
-            return false;
-        }
-    }
-
+                    return true;
+                } catch (error) {
+                    console.error("❌ Error al actualizar datos de compras:", error.message);
+                    return false;
+                }
+            }
+//#endregion
 
 module.exports = {
     obtenerDatosDistribuidorPorRFC,

@@ -20,11 +20,13 @@ app.use(morgan(":method :url :status :remote-addr"));
 const loginRouter = require("./routes/login.routes");
 const prospectoRouter = require("./routes/prospecto.routes");
 const confirmacionRouter = require("./routes/confirmacion.routes");
+const distSiscadRouter = require("./routes/distribuidoresSiscad.routes");
 
 // Prefijo para las rutas - endpints - api
 app.use("/login", loginRouter);
 app.use("/prospecto", prospectoRouter);
 app.use("/confirmacion", confirmacionRouter);
+app.use("/distribuidores/siscad", distSiscadRouter);
 
 
 
