@@ -12,16 +12,17 @@ const {
     actualizarStatusPorRFC,
     catalogoTipoCliente,
     insertarDireccionDesdeRegisterSThree,
+    upsertCreditos
 } = require("../services/confirmacion.service");
 const { enviarCorreoBienvenida, bienvenidaClienteWeb } = require("../utils/correo");
 
 async function confirmarDistribuidor(req, res) {
-    const { rfc, accion, tipo_cliente_id, idDistribuidor } = req.body;
-
+    const { rfc, accion, tipo_cliente_id } = req.body;
+    //console.log("IdDistribuidor: ", idDistribuidor);
     const distribuidor = await getDistribuidorInfoPorRFC(rfc);
     if (!distribuidor) return res.status(404).json({ message: "Distribuidor no encontrado" });
 
-    if (accion.toLowerCase() === "aceptar") {
+    if (accion === "Aceptar") {
         if (!tipo_cliente_id) {
             return res.status(400).json({ message: "Debe incluir tipo_cliente_id" });
         }
@@ -37,11 +38,21 @@ async function confirmarDistribuidor(req, res) {
 
         const hashedPwd = await bcrypt.hash(pwd, 10); // 3. ahora sí: la hasheamos
 
-        await insertUsuario(distribuidor.CorreoFact, hashedPwd, idDistribuidor);
+        await insertUsuario(distribuidor.CorreoFact, hashedPwd, nuevoId);
         await updateTipoCliente(rfc, tipo_cliente_id);
-        await actualizarIdDistribuidorEnSteps(rfc, idDistribuidor);
+        await actualizarIdDistribuidorEnSteps(rfc, nuevoId);
         await actualizarStatusPorRFC(rfc, "Aceptado");
-        await insertarDireccionDesdeRegisterSThree(rfc, idDistribuidor);
+        await insertarDireccionDesdeRegisterSThree(rfc, nuevoId);
+
+        if (req.body.creditos && typeof req.body.creditos === 'object') {
+            try {
+                console.log("📦 Créditos recibidos en el backend:", req.body.creditos);
+                await upsertCreditos(nuevoId, req.body.creditos);
+            } catch (error) {
+                console.warn("⚠️ Créditos no insertados/actualizados:", error.message);
+                // No detenemos la ejecución si los créditos fallan
+            }
+        }
 
         res.json({
             message: "Distribuidor confirmado y correo enviado",
@@ -49,11 +60,11 @@ async function confirmarDistribuidor(req, res) {
             password: pwd,
             idDistribuidor: nuevoId,
         });
-    } else if (accion.toLowerCase() === "Denegar") {
+    } else if (accion === "Denegar") {
         await actualizarStatusPorRFC(rfc, "Rechazado");
         res.json({ message: "Distribuidor denegado. Status actualizado." });
     } else {
-        res.status(400).json({ message: "Acción inválida. Usa 'aceptar' o 'denegar'" });
+        res.status(400).json({ message: "Acción inválida. Usa 'Aceptar' o 'Denegar'" });
     }
 
 }
@@ -68,8 +79,8 @@ async function obtenerCatalogoTipoCliente(req, res) {
 }
 
 async function confirmAltaDistExistente(req, res) {
-    const { rfc, idDistribuidor } = req.body;
-    //console.log("Id del Distribuidor a registrar: ", idDistribuidor)
+    const { rfc, idDistribuidor, creditos } = req.body;
+    console.log("Id del Distribuidor a registrar: ", creditos)
     if (!rfc || !idDistribuidor) {
         return res.status(400).json({ message: "RFC e idDistribuidor son obligatorios" });
     }
@@ -91,6 +102,7 @@ async function confirmAltaDistExistente(req, res) {
         await insertUsuario(distribuidor.CorreoFact, passwordHash, idDistribuidor);
         await actualizarIdDistribuidorEnSteps(rfc, idDistribuidor);
         await insertarDireccionDesdeRegisterSThree(rfc, idDistribuidor);
+        await actualizarCreditoProspecto(creditos)
         //await enviarCorreoBienvenida(distribuidor.CorreoFact, distribuidor.CorreoFact, passwordPlano);
 
         res.status(200).json({

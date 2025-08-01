@@ -34,11 +34,12 @@ async function insertUsuario(usuario, password, idDistribuidor) {
     await pool
         .request()
         .input("usuario", usuario)
+        .input("correo", usuario)
         .input("password", password)
         .input("idDistribuidor", idDistribuidor)
         .query(`
-      INSERT INTO [CadDist].[dbo].[Usuarios] (Usuario, Password, IdDistribuidor)
-      VALUES (@usuario, @password, @idDistribuidor)
+      INSERT INTO [CadDist].[dbo].[Usuarios] (Usuario, Correo, Password, IdDistribuidor)
+      VALUES (@usuario, @correo, @password, @idDistribuidor)
     `);
 }
 
@@ -137,6 +138,97 @@ async function insertarDireccionDesdeRegisterSThree(rfc, idDistribuidor) {
         `);
 }
 
+async function upsertCreditos(idDistribuidor, creditos) {
+    const pool = await getConnection('DistWeb');
+
+    const check = await pool.request()
+        .input("id", idDistribuidor)
+        .query(`SELECT COUNT(*) as existe FROM [dbo].[DescuentosDistribuidores] WHERE IdDistribuidor = @id`);
+
+    const existe = check.recordset[0]?.existe > 0;
+
+    const {
+        LimiteCredito,
+        DiasCredito,
+        DescuentoAutorizado,
+        Des_TinGra,
+        Des_InsTon,
+        Des_InsTin,
+        Des_CarTon,
+        Des_CarTin
+    } = creditos;
+
+    const LineaProducto = 'TODOS'; // o alguna lógica si manejas distintas líneas
+    const Descuento = 0; // si necesitas un campo genérico base
+
+    if (existe) {
+        await pool.request()
+            .input("LimiteCredito", LimiteCredito)
+            .input("DiasCredito", DiasCredito)
+            .input("DescuentoAutorizado", DescuentoAutorizado)
+            .input("DescuentoTintaGranel", Des_TinGra)
+            .input("DescuentoInsumoToner", Des_InsTon)
+            .input("DescuentoInsumoTinta", Des_InsTin)
+            .input("DescuentoCartuchoToner", Des_CarTon)
+            .input("DescuentoCartuchoTinta", Des_CarTin)
+            .input("IdDistribuidor", idDistribuidor)
+            .query(`
+                UPDATE [dbo].[DescuentosDistribuidores]
+                SET LimiteCredito = @LimiteCredito,
+                    DiasCredito = @DiasCredito,
+                    DescuentoAutorizado = @DescuentoAutorizado,
+                    DescuentoTintaGranel = @DescuentoTintaGranel,
+                    DescuentoInsumoToner = @DescuentoInsumoToner,
+                    DescuentoInsumoTinta = @DescuentoInsumoTinta,
+                    DescuentoCartuchoToner = @DescuentoCartuchoToner,
+                    DescuentoCartuchoTinta = @DescuentoCartuchoTinta
+                WHERE IdDistribuidor = @IdDistribuidor
+            `);
+    } else {
+        await pool.request()
+            .input("IdDistribuidor", idDistribuidor)
+            .input("LineaProducto", LineaProducto)
+            .input("Descuento", Descuento)
+            .input("LimiteCredito", LimiteCredito)
+            .input("DiasCredito", DiasCredito)
+            .input("DescuentoAutorizado", DescuentoAutorizado)
+            .input("DescuentoTintaGranel", Des_TinGra)
+            .input("DescuentoInsumoToner", Des_InsTon)
+            .input("DescuentoInsumoTinta", Des_InsTin)
+            .input("DescuentoCartuchoToner", Des_CarTon)
+            .input("DescuentoCartuchoTinta", Des_CarTin)
+            .query(`
+                INSERT INTO [dbo].[DescuentosDistribuidores] (
+                    IdDistribuidor,
+                    LineaProducto,
+                    Descuento,
+                    LimiteCredito,
+                    DiasCredito,
+                    DescuentoAutorizado,
+                    DescuentoTintaGranel,
+                    DescuentoInsumoToner,
+                    DescuentoInsumoTinta,
+                    DescuentoCartuchoToner,
+                    DescuentoCartuchoTinta
+                ) VALUES (
+                    @IdDistribuidor,
+                    @LineaProducto,
+                    @Descuento,
+                    @LimiteCredito,
+                    @DiasCredito,
+                    @DescuentoAutorizado,
+                    @DescuentoTintaGranel,
+                    @DescuentoInsumoToner,
+                    @DescuentoInsumoTinta,
+                    @DescuentoCartuchoToner,
+                    @DescuentoCartuchoTinta
+                )
+            `);
+    }
+
+    return { ok: true, operacion: existe ? 'actualizado' : 'insertado' };
+}
+
 module.exports = {
     generarPassword,
     getDistribuidorInfoPorRFC,
@@ -147,4 +239,5 @@ module.exports = {
     actualizarStatusPorRFC,
     catalogoTipoCliente,
     insertarDireccionDesdeRegisterSThree,
+    upsertCreditos
 };
