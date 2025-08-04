@@ -1,7 +1,8 @@
 const {
     obtenerDistribuidoresSiscad,
     buscarDistribuidorPorRFC,
-    buscarDistribuidorPorNombre
+    buscarDistribuidorPorNombre,
+    buscarDistribuidorPorIdDistribuidor
 } = require("../services/distribuidoresSiscad.service");
 
 async function getDistribuidoresExistentes(req, res) {
@@ -25,6 +26,18 @@ async function getDistribuidorPorRFC(req, res) {
     }
 }
 
+async function getDistribuidorPorId(req, res) {
+    const { idDist } = req.params;
+    try {
+        const data = await buscarDistribuidorPorIdDistribuidor(idDist);
+        console.log(data);
+        res.json(data);
+    } catch (error) {
+        console.error("❌ Error al buscar por id:", error.message);
+        res.status(500).json({ message: "Error al buscar por id distribuidor" });
+    }
+}
+
 async function getDistribuidorPorNombre(req, res) {
     const { nombre } = req.params;
     try {
@@ -39,5 +52,6 @@ async function getDistribuidorPorNombre(req, res) {
 module.exports = {
     getDistribuidoresExistentes,
     getDistribuidorPorRFC,
-    getDistribuidorPorNombre
+    getDistribuidorPorNombre,
+    getDistribuidorPorId
 };

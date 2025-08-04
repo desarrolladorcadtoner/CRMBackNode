@@ -102,7 +102,16 @@ async function confirmAltaDistExistente(req, res) {
         await insertUsuario(distribuidor.CorreoFact, passwordHash, idDistribuidor);
         await actualizarIdDistribuidorEnSteps(rfc, idDistribuidor);
         await insertarDireccionDesdeRegisterSThree(rfc, idDistribuidor);
-        //await upsertCreditos(creditos)
+
+        /*if (req.body.creditos && typeof req.body.creditos === 'object') {
+            try {
+                console.log("📦 Créditos recibidos en el backend:", req.body.creditos);
+                await upsertCreditos(idDistribuidor, creditos);
+            } catch (error) {
+                console.warn("⚠️ Créditos no insertados/actualizados:", error.message);
+                // No detenemos la ejecución si los créditos fallan
+            }
+        }*/
         //await enviarCorreoBienvenida(distribuidor.CorreoFact, distribuidor.CorreoFact, passwordPlano);
 
         res.status(200).json({
