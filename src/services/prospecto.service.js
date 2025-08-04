@@ -332,17 +332,17 @@ const path = require("path");
         try {
             const query = `
                 UPDATE [dbo].[CreditosProspectos]
-                            SET
-                                LimiteCredito = @param0,
-                                DiasCredito = @param1,
-                                Des_Aut = @param2,
-                                Des_TinGra = @param3,
-                                Des_InsTon = @param4,
-                                Des_InsTin = @param5,
-                                Des_CarTon = @param6,
-                                Des_CarTin = @param7
-                            WHERE RFC = @param8
-                        `;            
+                SET
+                    LimiteCredito = @param0,
+                    DiasCredito = @param1,
+                    Des_Aut = @param2,
+                    Des_TinGra = @param3,
+                    Des_InsTon = @param4,
+                    Des_InsTin = @param5,
+                    Des_CarTon = @param6,
+                    Des_CarTin = @param7
+                WHERE RFC = @param8
+                `;            
 
             await executeQuery('DistCRM', query, [
                 LimiteCredito,

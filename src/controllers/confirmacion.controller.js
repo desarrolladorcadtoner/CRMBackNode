@@ -80,7 +80,7 @@ async function obtenerCatalogoTipoCliente(req, res) {
 
 async function confirmAltaDistExistente(req, res) {
     const { rfc, idDistribuidor, creditos } = req.body;
-    console.log("Id del Distribuidor a registrar: ", creditos)
+    //console.log("Id del Distribuidor a registrar: ", creditos)
     if (!rfc || !idDistribuidor) {
         return res.status(400).json({ message: "RFC e idDistribuidor son obligatorios" });
     }
@@ -102,7 +102,7 @@ async function confirmAltaDistExistente(req, res) {
         await insertUsuario(distribuidor.CorreoFact, passwordHash, idDistribuidor);
         await actualizarIdDistribuidorEnSteps(rfc, idDistribuidor);
         await insertarDireccionDesdeRegisterSThree(rfc, idDistribuidor);
-        await actualizarCreditoProspecto(creditos)
+        //await upsertCreditos(creditos)
         //await enviarCorreoBienvenida(distribuidor.CorreoFact, distribuidor.CorreoFact, passwordPlano);
 
         res.status(200).json({

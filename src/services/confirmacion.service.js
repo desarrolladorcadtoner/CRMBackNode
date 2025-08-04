@@ -46,7 +46,7 @@ async function insertUsuario(usuario, password, idDistribuidor) {
 // Actualizar el ID del distribuidor en las tablas de pasos
 async function actualizarIdDistribuidorEnSteps(rfc, id) {
     const pool = await getConnection('DistWeb');
-    const tablas = ["RegisterSOne", "RegisterSTwo", "RegisterSThree", "RegisterSFour"];
+    const tablas = ["RegisterSOne", "RegisterSTwo", "RegisterSThree", "RegisterSFour", "SeguimientoCliente"];
     for (const tabla of tablas) {
         await pool
             .request()

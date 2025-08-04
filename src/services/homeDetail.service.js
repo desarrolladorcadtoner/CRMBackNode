@@ -71,10 +71,33 @@ async function getTotalProspectos() {
 
 async function getProspectosPorStatus(status) {
     const pool = await getConnection('DistWeb');
+
+    // Para "Aceptado" y "Pendiente" contamos solo los que en seguimiento figuran como "Nuevo"
+    const queryAceptadoOPendiente = `
+    SELECT COUNT(*) AS total
+    FROM dbo.RegisterSOne r
+    INNER JOIN dbo.SeguimientoCliente s
+      ON s.RFC = r.RFC
+    WHERE r.Status = @status
+      AND s.tipoRegistro = 'Nuevo'
+  `;
+
+    // Para otros estatus (p.ej. "Rechazado") contamos directo sin filtrar por seguimiento
+    const queryDefault = `
+    SELECT COUNT(*) AS total
+    FROM dbo.RegisterSOne
+    WHERE Status = @status
+  `;
+
+    const query = (status === 'Aceptado' || status === 'Pendiente')
+        ? queryAceptadoOPendiente
+        : queryDefault;
+
     const result = await pool.request()
         .input('status', status)
-        .query(`SELECT COUNT(*) AS total FROM RegisterSOne WHERE Status = @status`);
-    return result.recordset[0].total;
+        .query(query);
+
+    return result.recordset[0]?.total ?? 0;
 }
 //#endregion
 
