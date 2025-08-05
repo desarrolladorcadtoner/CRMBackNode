@@ -44,28 +44,75 @@ const path = require("path");
         };
     }
 
-    async function obtenerDistribuidoresFiltrados() {
-        const pool = await getConnection('DistWeb');
-        const result = await pool.request().query(`
-        SELECT RFC, TipoPersona, RazonSocial, NombreComercial, Telefono, CorreoFact
-        FROM [CadDist].[dbo].[RegisterSOne]
-        WHERE RFC IS NOT NULL AND RFC != ''
-    `);
+/**
+* Trae distribuidores por estatus.
+* - "Aceptado" | "Pendiente": solo tipoRegistro = 'Nuevo' en SeguimientoCliente (excluye Migrados).
+* - "Rechazado": directo de RegisterSOne.
+* @param {"Aceptado"|"Pendiente"|"Rechazado"} status
+* @param {{ page?: number, pageSize?: number }} opts
+*/
+async function obtenerDistribuidoresFiltrados(status = "Pendiente", opts = {}) {
+    const page = Math.max(1, opts.page || 1);
+    const pageSize = Math.min(200, Math.max(1, opts.pageSize || 50));
+    const offset = (page - 1) * pageSize;
 
-        return result.recordset.map(dist => {
-            const base = {
-                RFC: dist.RFC?.trim() || '',
-                TipoPersona: dist.TipoPersona?.trim() || '',
-                RazonSocial: dist.RazonSocial?.trim() || '',
-                CorreoFact: dist.CorreoFact?.trim() || '',
-                Telefono: dist.Telefono?.trim() || '',
-            };
-            if (dist.TipoPersona.toLowerCase() === "moral") {
-                base.NombreComercial = dist.NombreComercial;
-            }
-            return base;
-        });
-    }
+    const pool = await getConnection("DistWeb");
+
+    const selectCols = `
+    r.RFC,
+    r.TipoPersona,
+    r.RazonSocial,
+    r.NombreComercial,
+    r.Telefono,
+    r.CorreoFact
+  `;
+
+    // Para Aceptado/Pendiente: unir con SeguimientoCliente y exigir tipoRegistro = 'Nuevo'
+    const queryConJoin = `
+    SELECT ${selectCols}
+    FROM [dbo].[RegisterSOne] r
+    INNER JOIN [dbo].[SeguimientoCliente] s
+      ON s.RFC = r.RFC
+    WHERE r.Status = @status
+      AND r.RFC IS NOT NULL AND r.RFC <> ''
+      AND s.tipoRegistro = 'Nuevo'
+    ORDER BY r.RFC
+    OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY;
+  `;
+
+    // Para Rechazado: sin join
+    const querySinJoin = `
+    SELECT ${selectCols}
+    FROM [dbo].[RegisterSOne] r
+    WHERE r.Status = @status
+      AND r.RFC IS NOT NULL AND r.RFC <> ''
+    ORDER BY r.RFC
+    OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY;
+  `;
+
+    const usarJoin = status === "Aceptado" || status === "Pendiente";
+    const sql = usarJoin ? queryConJoin : querySinJoin;
+
+    const result = await pool.request()
+        .input("status", status)
+        .input("offset", offset)
+        .input("pageSize", pageSize)
+        .query(sql);
+
+    return result.recordset.map((dist) => {
+        const base = {
+            RFC: dist.RFC?.trim() || "",
+            TipoPersona: dist.TipoPersona?.trim() || "",
+            RazonSocial: dist.RazonSocial?.trim() || "",
+            CorreoFact: dist.CorreoFact?.trim() || "",
+            Telefono: dist.Telefono?.trim() || "",
+        };
+        if (dist?.TipoPersona?.toLowerCase() === "moral") {
+            base.NombreComercial = dist.NombreComercial;
+        }
+        return base;
+    });
+}
 
     async function obtenerDocumentosPorRFC(rfc) {
         const pool = await getConnection('DistWeb');
@@ -115,6 +162,8 @@ const path = require("path");
     }
 
     //#region Funciones para enviar el prospecto nuevo o migrado a Siscado o autmotaico
+
+
     /* ---------- Funcion de get para compartir la informacion a externo ---------- */
     //#region Funciones para obtener los datos generales a enviar del prospecto 
     // Obtener info principal del prospecto (RegisterSOne)
