@@ -108,7 +108,7 @@ async function buscarDistribuidorPorRFC(rfc) {
             SELECT cl_clte, cl_nomb, cl_rfc, cl_email, cl_tipcl, cl_dire, cl_colonia, cl_ciud, cl_edo, cl_codpost
             FROM [SISCAD].[dbo].[cad4cli0]
             WHERE cl_rfc = @rfc
-              AND cvetipcl IN (2, 3)
+              AND cvetipcl IN (1, 2, 3, 8)
               AND cl_fecvta >= DATEADD(YEAR, -2, GETDATE())
         `);
 
@@ -134,7 +134,7 @@ async function buscarDistribuidorPorIdDistribuidor(id) {
             SELECT cl_clte, cl_nomb, cl_rfc, cl_email, cl_tipcl, cl_dire, cl_colonia, cl_ciud, cl_edo, cl_codpost
             FROM [SISCAD].[dbo].[cad4cli0]
             WHERE cl_clte = @id
-              AND cvetipcl IN (2, 3)
+              AND cvetipcl IN (1, 2, 3, 8)
               AND cl_fecvta >= DATEADD(YEAR, -2, GETDATE())
         `);
 
@@ -160,7 +160,7 @@ async function buscarDistribuidorPorNombre(nombre) {
             SELECT cl_clte, cl_nomb, cl_rfc, cl_email, cl_tipcl, cl_dire, cl_colonia, cl_ciud, cl_edo, cl_codpost
             FROM [SISCAD].[dbo].[cad4cli0]
             WHERE cl_nomb LIKE @nombre
-              AND cvetipcl IN (2, 3)
+              AND cvetipcl IN (1, 2, 3, 8)
               AND cl_fecvta >= DATEADD(YEAR, -2, GETDATE())
         `);
 

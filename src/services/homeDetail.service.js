@@ -84,10 +84,10 @@ async function getProspectosPorStatus(status) {
 
     // Para otros estatus (p.ej. "Rechazado") contamos directo sin filtrar por seguimiento
     const queryDefault = `
-    SELECT COUNT(*) AS total
-    FROM dbo.RegisterSOne
-    WHERE Status = @status
-  `;
+        SELECT COUNT(*) AS total
+        FROM dbo.RegisterSOne
+        WHERE Status = @status
+    `;
 
     const query = (status === 'Aceptado' || status === 'Pendiente')
         ? queryAceptadoOPendiente
