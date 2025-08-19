@@ -6,7 +6,8 @@ const {
     productosNulos,
     buscarProducto,
     resumenProspectos,
-    resumenDistribuidoresExistentes
+    resumenDistribuidoresExistentes,
+    productosSinReferencia
 } = require("../controllers/homeDetail.controller");
 
 router.get("/productos/total", totalProductos);
@@ -15,5 +16,6 @@ router.get("/productos/nulos/:columna", productosNulos);
 router.get("/productos/buscar/:campo/:valor", buscarProducto);
 router.get("/prospectos/resumen", resumenProspectos);
 router.get('/distribuidores/existentes', resumenDistribuidoresExistentes);
+router.get("/productos/sin-referencia", productosSinReferencia);
 
 module.exports = router;

@@ -7,7 +7,8 @@ const {
     getProspectosPorStatus,
     getTotalDistribuidoresSiscad,
     getTotalMigrados,
-    getTotalPendientesMigrar
+    getTotalPendientesMigrar,
+    getProductosSinReferencia
 } = require("../services/homeDetail.service");
 
 async function totalProductos(req, res) {
@@ -66,11 +67,22 @@ async function resumenDistribuidoresExistentes(req, res) {
     }
 }
 
+async function productosSinReferencia(req, res) {
+    try {
+        const total = await getProductosSinReferencia();
+        res.json({ total });
+    } catch (error) {
+        console.error("❌ Error en productosSinReferencia:", error.message);
+        res.status(500).json({ message: "Error al obtener productos sin referencia" });
+    }
+}
+
 module.exports = {
     totalProductos,
     productosSinActualizar,
     productosNulos,
     buscarProducto,
     resumenProspectos,
-    resumenDistribuidoresExistentes
+    resumenDistribuidoresExistentes,
+    productosSinReferencia
 };
