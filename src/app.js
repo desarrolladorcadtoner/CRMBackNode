@@ -22,6 +22,7 @@ const prospectoRouter = require("./routes/prospecto.routes");
 const confirmacionRouter = require("./routes/confirmacion.routes");
 const distSiscadRouter = require("./routes/distribuidoresSiscad.routes");
 const homeDetail = require("./routes/homeDetail.routes");
+const productosRouter = require("./routes/productos.routes");
 
 // Prefijo para las rutas - endpints - api
 app.use("/login", loginRouter);
@@ -29,6 +30,7 @@ app.use("/prospecto", prospectoRouter);
 app.use("/confirmacion", confirmacionRouter);
 app.use("/distribuidores/siscad", distSiscadRouter);
 app.use("/dashboard", homeDetail);
+app.use("/productos", productosRouter);
 
 app.get("/", (req, res) => {
     res.send("✅ CRM Backend activo desde app.js");
