@@ -1,58 +1,89 @@
-// src/controllers/login.controller.js
-const { validarUsuario, altaUsuarioCRM, getUsuarioByUsername } = require("../services/login.service");
+// controllers/login.controller.js
+const {
+    validarUsuario,
+    altaUsuarioCRM,
+    getUsuarioByUsername,
+    actualizarUltimoAcceso
+} = require("../services/login.service");
+
 const jwt = require("jsonwebtoken");
 
-const SECRET = process.env.JWT_SECRET || "secretKey"; // guarda esto en tu .env
+const SECRET = process.env.JWT_SECRET || "secretKey"; // ⚠️ cámbialo en tu .env
 
+// ✅ Login
 async function loginUsuario(req, res) {
     const { usuario, password } = req.body;
 
-    const esValido = await validarUsuario(usuario, password);
-    if (!esValido) return res.status(401).json({ message: "Usuario inválido" });
+    try {
+        const user = await validarUsuario(usuario, password);
+        if (!user) {
+            return res.status(401).json({ message: "Credenciales inválidas" });
+        }
 
-    const user = await getUsuarioByUsername(usuario);
+        // Actualizar último acceso
+        await actualizarUltimoAcceso(usuario);
 
-    const token = jwt.sign({ usuario: user.Usuario }, process.env.JWT_SECRET, {
-        expiresIn: "1d",
-    });
+        // Generar token
+        const token = jwt.sign(
+            { id: user.Id, usuario: user.Usuario, rol: user.Rol },
+            SECRET,
+            { expiresIn: "1d" }
+        );
 
-    // Enviar cookie segura
-    res.cookie("token", token, {
-        httpOnly: true,
-        secure: false, // true si usas HTTPS
-        sameSite: "none",
-        maxAge: 24 * 60 * 60 * 1000,
-    });
+        // Enviar cookie segura
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: false, // ⚠️ pon true si usas HTTPS
+            sameSite: "lax",
+            maxAge: 24 * 60 * 60 * 1000,
+        });
 
-    res.json({ message: "Usuario válido" }); // Ya no enviamos el token manualmente
+        res.json({
+            message: "Login exitoso",
+            usuario: {
+                id: user.Id,
+                nombre: user.Usuario,
+                rol: user.Rol,
+                departamento: user.Departamento,
+                correo: user.CorreoCorporativo,
+            },
+        });
+    } catch (error) {
+        console.error("❌ Error en loginUsuario:", error);
+        res.status(500).json({ message: "Error en servidor" });
+    }
 }
 
-/*async function testConexion(req, res) {
-    try {
-        const pool = await getConnection('DistCRM');
-        const result = await pool.request()
-            .query("SELECT TOP 5 * FROM [CadCRM].[dbo].[c4users]");
-
-        return res.json(result.recordset);
-    } catch (err) {
-        console.error("❌ Error al consultar usuarios:", err);
-        return res.status(500).json({ error: "No se pudo consultar la base de datos" });
-    }
-}*/
-
+// ✅ Crear usuario nuevo
 async function crearUsuario(req, res) {
     try {
         const exito = await altaUsuarioCRM(req.body);
         if (exito) {
-            return res.json({ message: "Usuario insertado correctamente" });
+            return res.json({ message: "Usuario creado correctamente" });
         } else {
-            return res.status(500).json({ message: "Error al insertar usuario" });
+            return res.status(500).json({ message: "Error al crear usuario" });
         }
     } catch (error) {
+        console.error("❌ Error en crearUsuario:", error);
         return res.status(500).json({ message: "Error del servidor" });
     }
 }
 
+// ✅ Obtener perfil por username
+async function obtenerUsuario(req, res) {
+    try {
+        const { username } = req.params;
+        const user = await getUsuarioByUsername(username);
+        if (!user) return res.status(404).json({ message: "Usuario no encontrado" });
+
+        res.json(user);
+    } catch (error) {
+        console.error("❌ Error en obtenerUsuario:", error);
+        res.status(500).json({ message: "Error del servidor" });
+    }
+}
+
+// ✅ Logout
 function logoutUsuario(req, res) {
     res.clearCookie("token");
     res.json({ message: "Sesión cerrada" });
@@ -61,5 +92,6 @@ function logoutUsuario(req, res) {
 module.exports = {
     loginUsuario,
     crearUsuario,
-    logoutUsuario
+    logoutUsuario,
+    obtenerUsuario,
 };

@@ -5,7 +5,8 @@ const { getConnection } = require("../config/db");
 async function getTotalProductos() {
     const pool = await getConnection('CadDist');
     const result = await pool.request().query(`
-        SELECT COUNT(*) AS total FROM [dbo].[ProductosFin]
+        SELECT COUNT(*) AS total FROM [dbo].[Productos]
+        WHERE TiendaId = 1
     `);
     return result.recordset[0].total;
 }
@@ -14,8 +15,9 @@ async function getTotalProductos() {
 async function getProductosSinActualizar() {
     const pool = await getConnection('CadDist');
     const result = await pool.request().query(`
-        SELECT COUNT(*) AS total FROM [dbo].[ProductosFin]
+        SELECT COUNT(*) AS total FROM [dbo].[Productos]
         WHERE ProductoDateUpd < DATEADD(YEAR, -1, GETDATE())
+        AND TiendaId = 1
     `);
     return result.recordset[0].total;
 }
@@ -23,12 +25,38 @@ async function getProductosSinActualizar() {
 // 3. Productos con datos nulos o vacíos en columnas clave
 async function getProductosConCamposNulos(columna) {
     const pool = await getConnection('CadDist');
-    const result = await pool.request()
-        .query(`
-            SELECT COUNT(*) AS total FROM [dbo].[ProductosFin]
-            WHERE ${columna} IS NULL OR LTRIM(RTRIM(${columna})) = ''
-        `);
-    return result.recordset[0].total;
+
+    // Lista de columnas que pertenecen a ProductosLang
+    const columnasProductosLang = [
+        "ProductoLangImagen",
+        "ProductoLangImagenNombre"
+        // agregar más en el futuro
+    ];
+
+    let query = "";
+
+    if (columnasProductosLang.includes(columna)) {
+        // Columna de ProductosLang
+        query = `
+            SELECT COUNT(*) AS total
+            FROM [dbo].[Productos] p
+            INNER JOIN [dbo].[ProductosLang] pl
+                ON p.ProductoId = pl.ProductoId
+            WHERE p.TiendaId = 1
+              AND (pl.${columna} IS NULL OR LTRIM(RTRIM(pl.${columna})) = '')
+        `;
+    } else {
+        // Columna de Productos
+        query = `
+            SELECT COUNT(*) AS total
+            FROM [dbo].[Productos] p
+            WHERE p.TiendaId = 1
+              AND (p.${columna} IS NULL OR LTRIM(RTRIM(p.${columna})) = '')
+        `;
+    }
+
+    const result = await pool.request().query(query);
+    return result.recordset[0]?.total ?? 0;
 }
 
 // 4. Filtro de productos por nombre, referencia, id o categoría
@@ -57,6 +85,20 @@ async function filtrarProductos({ referencia, id, categoria, nombre }) {
 
     return result.recordset;
 }
+
+// 5. Productos que no cuentan con productos relacionados
+async function getProductosSinReferencia() {
+    const pool = await getConnection('CadDist');
+    const result = await pool.request().query(`
+        SELECT COUNT(*) AS total
+        FROM [dbo].[Productos] p
+        LEFT JOIN [dbo].[ProductosRelacionadosProductos] pr
+            ON p.ProductoId = pr.ProductoId
+        WHERE p.TiendaId = 1
+          AND pr.ProductoId IS NULL
+    `);
+    return result.recordset[0]?.total ?? 0;
+}
 //#endregion
 
 //#region  Gestion de prospectos 
@@ -71,12 +113,37 @@ async function getTotalProspectos() {
 
 async function getProspectosPorStatus(status) {
     const pool = await getConnection('DistWeb');
+
+    // Para "Aceptado" y "Pendiente" contamos solo los que en seguimiento figuran como "Nuevo"
+    const queryAceptadoOPendiente = `
+    SELECT COUNT(*) AS total
+    FROM dbo.RegisterSOne r
+    INNER JOIN dbo.SeguimientoCliente s
+      ON s.RFC = r.RFC
+    WHERE r.Status = @status
+      AND s.tipoRegistro = 'Nuevo'
+  `;
+
+    // Para otros estatus (p.ej. "Rechazado") contamos directo sin filtrar por seguimiento
+    const queryDefault = `
+        SELECT COUNT(*) AS total
+        FROM dbo.RegisterSOne
+        WHERE Status = @status
+    `;
+
+    const query = (status === 'Aceptado' || status === 'Pendiente')
+        ? queryAceptadoOPendiente
+        : queryDefault;
+
     const result = await pool.request()
         .input('status', status)
-        .query(`SELECT COUNT(*) AS total FROM RegisterSOne WHERE Status = @status`);
-    return result.recordset[0].total;
+        .query(query);
+
+    return result.recordset[0]?.total ?? 0;
 }
 //#endregion
+
+//#region Gestion de Distribuidores de Siscad
 
 async function getTotalDistribuidoresSiscad() {
     const pool = await getConnection('Siscad');
@@ -139,6 +206,9 @@ async function getTotalPendientesMigrar() {
     return pendientes.length;
 }
 
+//#endregion 
+
+
 module.exports = {
     getTotalProductos,
     getProductosSinActualizar,
@@ -148,5 +218,6 @@ module.exports = {
     getProspectosPorStatus,
     getTotalDistribuidoresSiscad,
     getTotalMigrados,
-    getTotalPendientesMigrar
+    getTotalPendientesMigrar,
+    getProductosSinReferencia
 };

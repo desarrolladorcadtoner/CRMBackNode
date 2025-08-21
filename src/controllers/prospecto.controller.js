@@ -42,8 +42,15 @@ async function getDistribuidor(req, res) {
 }
 
 async function getDistribuidoresResumen(req, res) {
-    const datos = await obtenerDistribuidoresFiltrados();
-    res.json(datos);
+    const { status = "Pendiente" } = req.query;
+
+    try {
+        const datos = await obtenerDistribuidoresFiltrados(status, { page: 1, pageSize: 100 });
+        res.json(datos);
+    } catch (err) {
+        console.error("❌ Error al obtener distribuidores por status:", err.message);
+        res.status(500).json({ message: "Error al obtener distribuidores" });
+    }
 }
 
 async function actualizarCreditoProspecto(req, res){
