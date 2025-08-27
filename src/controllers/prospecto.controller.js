@@ -1,9 +1,10 @@
 const { obtenerDocumentosPorRFC, obtenerDatosDistribuidorPorRFC, obtenerDistribuidoresFiltrados, 
     getDataProspectoGeneral, getDatosContacto, getDireccionesEntrega, getDatosCompras, getDireccionFiscal,
-    actualizarDatosCompras } = require("../services/prospecto.service");
+    actualizarDatosCompras, obtenerDocumentosRfcCarpeta, getDocumentosBase64 } = require("../services/prospecto.service");
 const { updateTipoCliente } = require("../services/confirmacion.service");
 const { DistribuidorCompleto } = require("../models/prospecto.model");
 const archiver = require("archiver");
+
 
 async function descargarDocumentos(req, res) {
     const { rfc } = req.params;
@@ -32,6 +33,39 @@ async function descargarDocumentos(req, res) {
     }
 
     archive.finalize();
+}
+
+async function prepararCarpetaDocumentos(req, res) {
+    const { rfc } = req.params;
+
+    try {
+        // 1) Verificar que exista el distribuidor (opcional, pero útil)
+        const infoDocs = await obtenerDocumentosRfcCarpeta(rfc);
+        if (!infoDocs || !infoDocs.archivos || Object.keys(infoDocs.archivos).length === 0) {
+            return res.status(404).json({ message: "Distribuidor sin documentos" });
+        }
+
+        // 2) Obtener/guardar archivos en carpeta <RFC>
+        /*const infoDocs = await obtenerDocumentosPorRFC(rfc);
+        if (!infoDocs || !infoDocs.archivos || Object.keys(infoDocs.archivos).length === 0) {
+            return res.status(404).json({ message: "Distribuidor sin documentos" });
+        }*/
+
+        const baseUrl = `${req.protocol}://${req.get("host")}`;
+        const urls = Object.entries(infoDocs.archivos).map(([nombre, meta]) => ({
+            nombre, // ej. actaConstitutiva.pdf
+            url: `${baseUrl}/static/${infoDocs.carpeta}/${meta.filename}`
+        }));
+
+        return res.json({
+            rfc: infoDocs.carpeta,
+            carpeta: `/static/${infoDocs.carpeta}/`,
+            documentos: urls
+        });
+    } catch (err) {
+        console.error("❌ Error en prepararCarpetaDocumentos:", err.message);
+        return res.status(500).json({ message: "Error al preparar carpeta de documentos" });
+    }
 }
 
 async function getDistribuidor(req, res) {
@@ -118,6 +152,48 @@ async function updateAndSendProspecto(req, res) {
     }
 }
 
+async function sendDataProspecto(req, res) {
+    const { rfc } = req.params;
+
+    try {
+        // 1. Obtener info general
+        const datosGenerales = await getDataProspectoGeneral(rfc);
+        if (!datosGenerales) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        // 2. Obtener info adicional en paralelo
+        const [
+            DatosContacto,
+            DireccionesEntrega,
+            DatosCompras,
+            DireccionFiscal,
+            Documentos
+        ] = await Promise.all([
+            getDatosContacto(rfc),
+            getDireccionesEntrega(rfc),
+            getDatosCompras(rfc),
+            getDireccionFiscal(rfc),
+            getDocumentosBase64(rfc)
+        ]);
+
+        // 3. Armar respuesta completa
+        const prospectoResponse = {
+            ...datosGenerales,
+            DatosContacto,
+            DireccionesEntrega,
+            DatosCompras,
+            DireccionFiscal,
+            Documentos
+        };
+
+        res.json(prospectoResponse);
+    } catch (error) {
+        console.error("❌ Error en sendDataProspecto:", error.message);
+        res.status(500).json({ message: "Error al enviar datos del prospecto" });
+    }
+}
+
 
 module.exports = {
     descargarDocumentos,
@@ -125,4 +201,6 @@ module.exports = {
     getDistribuidoresResumen,
     actualizarCreditoProspecto,
     updateAndSendProspecto,
+    sendDataProspecto,
+    prepararCarpetaDocumentos
 };
