@@ -517,6 +517,55 @@ async function getDocumentosBase64(rfc) {
     return documentos;
 }
 
+/* ================================
+   NUEVAS FUNCIONES SolicitudTerceros
+   ================================ */
+
+async function crearSolicitudTerceros({ RFC, ClienteId = null, TipoSolicitud, DetalleSolicitud = null, UsuarioCRMId = null, OrigenSolicitud = "CRM", Prioridad = "Normal", IPCliente = null }) {
+    const query = `
+        INSERT INTO [dbo].[SolicitudTerceros] 
+        (RFC, ClienteId, TipoSolicitud, DetalleSolicitud, EstatusSolicitud, UsuarioCRMId, OrigenSolicitud, Prioridad, IPCliente)
+        OUTPUT INSERTED.SolicitudId
+        VALUES (@param0, @param1, @param2, @param3, 'Pendiente', @param4, @param5, @param6, @param7)
+    `;
+
+    const result = await executeQuery("DistCRM", query, [
+        RFC,
+        ClienteId,
+        TipoSolicitud,
+        DetalleSolicitud,
+        UsuarioCRMId,
+        OrigenSolicitud,
+        Prioridad,
+        IPCliente
+    ]);
+
+    return result[0]?.SolicitudId || null;
+}
+
+async function obtenerSolicitudPorId(idSolicitud) {
+    const query = `
+        SELECT *
+        FROM [dbo].[SolicitudTerceros]
+        WHERE SolicitudId = @param0
+    `;
+    const result = await executeQuery("DistCRM", query, [idSolicitud]);
+    return result[0] || null;
+}
+
+async function actualizarRespuestaSolicitud(idSolicitud, { ClienteId = null, EstatusSolicitud, RespuestaTercero }) {
+    const query = `
+        UPDATE [dbo].[SolicitudTerceros]
+        SET ClienteId = ISNULL(@param0, ClienteId),
+            EstatusSolicitud = @param1,
+            RespuestaTercero = @param2,
+            FechaActualizacion = GETDATE()
+        WHERE SolicitudId = @param3
+    `;
+    await executeQuery("DistCRM", query, [ClienteId, EstatusSolicitud, RespuestaTercero, idSolicitud]);
+    return true;
+}
+
 module.exports = {
     obtenerDatosDistribuidorPorRFC,
     obtenerDistribuidoresFiltrados,
@@ -531,5 +580,9 @@ module.exports = {
     getDireccionFiscal,
     getDocumentosBase64,
     /**Para actualizacion */
-    actualizarDatosCompras
+    actualizarDatosCompras,
+    /*SolicitudTerceros */
+    crearSolicitudTerceros,
+    obtenerSolicitudPorId,
+    actualizarRespuestaSolicitud
 };

@@ -1,6 +1,7 @@
 const { obtenerDocumentosPorRFC, obtenerDatosDistribuidorPorRFC, obtenerDistribuidoresFiltrados, 
     getDataProspectoGeneral, getDatosContacto, getDireccionesEntrega, getDatosCompras, getDireccionFiscal,
-    actualizarDatosCompras, obtenerDocumentosRfcCarpeta, getDocumentosBase64 } = require("../services/prospecto.service");
+    actualizarDatosCompras, obtenerDocumentosRfcCarpeta, getDocumentosBase64, crearSolicitudTerceros,
+    obtenerSolicitudPorId, actualizarRespuestaSolicitud } = require("../services/prospecto.service");
 const { updateTipoCliente } = require("../services/confirmacion.service");
 const { DistribuidorCompleto } = require("../models/prospecto.model");
 const archiver = require("archiver");
@@ -105,7 +106,7 @@ async function actualizarCreditoProspecto(req, res){
 }
 
 async function updateAndSendProspecto(req, res) {
-    const { rfc } = req.params;
+    const { idSolicitud } = req.params;
     const { tipoClienteId, creditos } = req.body;
 
     try {
@@ -194,6 +195,118 @@ async function sendDataProspecto(req, res) {
     }
 }
 
+/* ================================
+   NUEVOS CONTROLADORES SolicitudTerceros
+   ================================ */
+
+// Crear solicitud de alta
+async function crearSolicitudAlta(req, res) {
+    try {
+        const { RFC, ClienteId, UsuarioCRMId, DetalleSolicitud } = req.body;
+
+        if (!RFC) {
+            return res.status(400).json({ message: "El RFC es obligatorio" });
+        }
+
+        const idSolicitud = await crearSolicitudTerceros({
+            RFC,
+            ClienteId,
+            TipoSolicitud: "AltaProspecto",
+            DetalleSolicitud: DetalleSolicitud || null,
+            UsuarioCRMId,
+            OrigenSolicitud: "CRM"
+        });
+
+        res.json({ message: "Solicitud creada correctamente", idSolicitud });
+    } catch (err) {
+        console.error("❌ Error en crearSolicitudAlta:", err.message);
+        res.status(500).json({ message: "Error al crear solicitud" });
+    }
+}
+
+// Consultar solicitud por ID
+async function getSolicitudById(req, res) {
+    try {
+        const { idSolicitud } = req.params;
+        const solicitud = await obtenerSolicitudPorId(idSolicitud);
+
+        if (!solicitud) {
+            return res.status(404).json({ message: "Solicitud no encontrada" });
+        }
+
+        res.json(solicitud);
+    } catch (err) {
+        console.error("❌ Error en getSolicitudById:", err.message);
+        res.status(500).json({ message: "Error al obtener solicitud" });
+    }
+}
+
+// Enviar datos por idSolicitud (usa RFC)
+async function sendDataBySolicitud(req, res) {
+    try {
+        const { idSolicitud } = req.params;
+        const solicitud = await obtenerSolicitudPorId(idSolicitud);
+
+        if (!solicitud) {
+            return res.status(404).json({ message: "Solicitud no encontrada" });
+        }
+
+        const rfc = solicitud.RFC;
+
+        // Reutilizamos la lógica de sendDataProspecto
+        const datosGenerales = await getDataProspectoGeneral(rfc);
+        if (!datosGenerales) {
+            return res.status(404).json({ message: 'Prospecto no encontrado' });
+        }
+
+        const [
+            DatosContacto,
+            DireccionesEntrega,
+            DatosCompras,
+            DireccionFiscal,
+            Documentos
+        ] = await Promise.all([
+            getDatosContacto(rfc),
+            getDireccionesEntrega(rfc),
+            getDatosCompras(rfc),
+            getDireccionFiscal(rfc),
+            getDocumentosBase64(rfc)
+        ]);
+
+        res.json({
+            SolicitudId: solicitud.SolicitudId,
+            EstatusSolicitud: solicitud.EstatusSolicitud,
+            RespuestaTercero: solicitud.RespuestaTercero,
+            TipoSolicitud: solicitud.TipoSolicitud,
+            Prospecto: {
+                ...datosGenerales,
+                DatosContacto,
+                DireccionesEntrega,
+                DatosCompras,
+                DireccionFiscal,
+                Documentos
+            }
+        });
+    } catch (err) {
+        console.error("❌ Error en sendDataBySolicitud:", err.message);
+        res.status(500).json({ message: "Error al enviar datos por solicitud" });
+    }
+}
+
+// Actualizar respuesta del tercero
+async function actualizarRespuestaSolicitudCtrl(req, res) {
+    try {
+        const { idSolicitud } = req.params;
+        const { ClienteId, EstatusSolicitud, RespuestaTercero } = req.body;
+
+        await actualizarRespuestaSolicitud(idSolicitud, { ClienteId, EstatusSolicitud, RespuestaTercero });
+
+        res.json({ message: "Respuesta de solicitud actualizada correctamente" });
+    } catch (err) {
+        console.error("❌ Error en actualizarRespuestaSolicitudCtrl:", err.message);
+        res.status(500).json({ message: "Error al actualizar respuesta" });
+    }
+}
 
 module.exports = {
     descargarDocumentos,
@@ -202,5 +315,9 @@ module.exports = {
     actualizarCreditoProspecto,
     updateAndSendProspecto,
     sendDataProspecto,
-    prepararCarpetaDocumentos
+    prepararCarpetaDocumentos,
+    crearSolicitudAlta,
+    getSolicitudById,
+    sendDataBySolicitud,
+    actualizarRespuestaSolicitudCtrl
 };
