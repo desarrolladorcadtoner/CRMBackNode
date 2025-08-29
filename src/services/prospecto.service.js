@@ -161,6 +161,35 @@ async function obtenerDocumentosPorRFC(rfc) {
     return archivos;
 }
 
+async function marcarDocumentosComoDescargados(rfc) {
+    try {
+        const query = `
+            UPDATE [CadDist].[dbo].[SeguimientoCliente]
+            SET documentosDescargados = 1,
+                fechaActualizacion = GETDATE()
+            WHERE RFC = @param0;
+        `;
+        await executeQuery("DistWeb", query, [rfc]);
+        return true;
+    } catch (error) {
+        console.error("❌ Error al marcar documentos como descargados:", error.message);
+        return false;
+    }
+}
+
+async function getDocumentosDescargados(rfc) {
+    const query = `
+        SELECT documentosDescargados
+        FROM [CadDist].[dbo].[SeguimientoCliente]
+        WHERE RFC = @param0
+    `;
+    const data = await executeQuery("DistWeb", query, [rfc]);
+    if (!data[0]) return false;
+
+    const valor = data[0].documentosDescargados;
+    return valor === true || valor === 1;
+}
+
 async function obtenerDocumentosRfcCarpeta(rfc) {
     const pool = await getConnection('DistWeb');
     const result = await pool.request()
@@ -496,7 +525,8 @@ async function getDocumentosBase64(rfc) {
     const result = await pool.request()
         .input("rfc", rfc)
         .query(`
-            SELECT actaConstitutiva, constanciaFiscal, comprobanteDomicilio, edoCuenta, ine
+            SELECT actaConstitutiva, constanciaFiscal, comprobanteDomicilio, edoCuenta, ine,
+            actaConstitutivaExtension, constanciaFiscalExtension, comprobanteDomicilioExtension, edoCuentaExtension, ineExtension
             FROM [CadDist].[dbo].[RegisterSFour]
             WHERE RFC = @rfc
         `);
@@ -508,19 +538,75 @@ async function getDocumentosBase64(rfc) {
     // Convertir a base64 si hay contenido
     const documentos = {
         ActaConstitutiva: row.actaConstitutiva ? Buffer.from(row.actaConstitutiva).toString("base64") : null,
+        ActaConstitutivaExtension: row.actaConstitutivaExtension,
         ConstanciaFiscal: row.constanciaFiscal ? Buffer.from(row.constanciaFiscal).toString("base64") : null,
+        ConstanciaFiscalExtension: row.constanciaFiscalExtension,
         ComprobanteDomicilio: row.comprobanteDomicilio ? Buffer.from(row.comprobanteDomicilio).toString("base64") : null,
+        ComprobanteDomicilioExtension: row.comprobanteDomicilioExtension,
         EdoCuenta: row.edoCuenta ? Buffer.from(row.edoCuenta).toString("base64") : null,
+        EdoCuentaExtension: row.edoCuentaExtension,
         INE: row.ine ? Buffer.from(row.ine).toString("base64") : null,
+        INEExtension: row.ineExtension,
     };
 
     return documentos;
+}
+
+/* ================================
+   NUEVAS FUNCIONES SolicitudTerceros
+   ================================ */
+
+async function crearSolicitudTerceros({ RFC, ClienteId = null, TipoSolicitud, DetalleSolicitud = null, UsuarioCRMId = null, OrigenSolicitud = "CRM", Prioridad = "Normal", IPCliente = null }) {
+    const query = `
+        INSERT INTO [dbo].[SolicitudTerceros] 
+        (RFC, ClienteId, TipoSolicitud, DetalleSolicitud, EstatusSolicitud, UsuarioCRMId, OrigenSolicitud, Prioridad, IPCliente)
+        OUTPUT INSERTED.SolicitudId
+        VALUES (@param0, @param1, @param2, @param3, 'Pendiente', @param4, @param5, @param6, @param7)
+    `;
+
+    const result = await executeQuery("DistCRM", query, [
+        RFC,
+        ClienteId,
+        TipoSolicitud,
+        DetalleSolicitud,
+        UsuarioCRMId,
+        OrigenSolicitud,
+        Prioridad,
+        IPCliente
+    ]);
+
+    return result[0]?.SolicitudId || null;
+}
+
+async function obtenerSolicitudPorId(idSolicitud) {
+    const query = `
+        SELECT *
+        FROM [dbo].[SolicitudTerceros]
+        WHERE SolicitudId = @param0
+    `;
+    const result = await executeQuery("DistCRM", query, [idSolicitud]);
+    return result[0] || null;
+}
+
+async function actualizarRespuestaSolicitud(idSolicitud, { ClienteId = null, EstatusSolicitud, RespuestaTercero }) {
+    const query = `
+        UPDATE [dbo].[SolicitudTerceros]
+        SET ClienteId = ISNULL(@param0, ClienteId),
+            EstatusSolicitud = @param1,
+            RespuestaTercero = @param2,
+            FechaActualizacion = GETDATE()
+        WHERE SolicitudId = @param3
+    `;
+    await executeQuery("DistCRM", query, [ClienteId, EstatusSolicitud, RespuestaTercero, idSolicitud]);
+    return true;
 }
 
 module.exports = {
     obtenerDatosDistribuidorPorRFC,
     obtenerDistribuidoresFiltrados,
     obtenerDocumentosPorRFC,
+    marcarDocumentosComoDescargados,
+    getDocumentosDescargados,
     obtenerDocumentosRfcCarpeta,
     /** Get de envio de información **/
     getDataProspectoGeneral,
@@ -531,5 +617,9 @@ module.exports = {
     getDireccionFiscal,
     getDocumentosBase64,
     /**Para actualizacion */
-    actualizarDatosCompras
+    actualizarDatosCompras,
+    /*SolicitudTerceros */
+    crearSolicitudTerceros,
+    obtenerSolicitudPorId,
+    actualizarRespuestaSolicitud
 };
