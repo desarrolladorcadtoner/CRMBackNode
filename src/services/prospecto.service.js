@@ -519,6 +519,10 @@ async function actualizarDatosCompras(rfc, { LimiteCredito, DiasCredito, Descuen
     }
 }
 
+/* ================================
+   NUEVAS FUNCIONES SolicitudTerceros
+   ================================ */
+
 /*Obtener Documentos y mandarlos en Base 64 */
 async function getDocumentosBase64(rfc) {
     const pool = await getConnection('DistWeb');
@@ -551,10 +555,6 @@ async function getDocumentosBase64(rfc) {
 
     return documentos;
 }
-
-/* ================================
-   NUEVAS FUNCIONES SolicitudTerceros
-   ================================ */
 
 async function crearSolicitudTerceros({ RFC, ClienteId = null, TipoSolicitud, DetalleSolicitud = null, UsuarioCRMId = null, OrigenSolicitud = "CRM", Prioridad = "Normal", IPCliente = null }) {
     const query = `

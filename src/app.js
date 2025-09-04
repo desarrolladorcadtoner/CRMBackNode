@@ -16,7 +16,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(morgan(":method :url :status :remote-addr"));
-app.use("/static", express.static(path.join(process.cwd(), "documentos")));
+app.use("/static", express.static(path.join(process.cwd(), "documentos"))); 
 
 // Rutas
 const loginRouter = require("./routes/login.routes");
